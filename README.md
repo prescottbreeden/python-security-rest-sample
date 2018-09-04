@@ -8,22 +8,70 @@ Microsoft Graph provides REST APIs for integrating with Intelligent Security Gra
 | ------------------- | ------------------------------------------ | ---- |
 | Get Alerts          | /security/alerts                           | [docs](https://developer.microsoft.com/en-us/graph/docs/api-reference/beta/resources/alert)  |
 | Get user profile    | /me                                        | [docs](https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/api/user_get) |
-| Send mail           | /me/microsoft.graph.sendMail               | [docs](https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/api/user_sendmail) |
+| Create a webhook subscription    | /subscriptions                                   | [docs](https://developer.microsoft.com/en-us/graph/docs/concepts/webhooks) |
 
 For additional information about this sample, see [Get started with Microsoft Graph in a Python app](https://developer.microsoft.com/en-us/graph/docs/concepts/python
 ).
 
+* [Prerequisites](#prerequisites)
 * [Installation](#installation)
 * [Running the sample](#running-the-sample)
 * [Sendmail helper function](#sendmail-helper-function)
 * [Contributing](#contributing)
 * [Resources](#resources)
 
+## Prerequisites
+
+Before installing the sample:
+
+* Install Python from [https://www.python.org/](https://www.python.org/). We've tested the code with Python 3.6, but any Python 3.x version should work. If your code base is running under Python 2.7, you may find it helpful to use the [3to2](https://pypi.python.org/pypi/3to2) tools to port the code to Python 2.7.
+* To register your application for access to Microsoft Graph, you'll need either a [Microsoft account](https://www.outlook.com) or an [Office 365 for business account](https://msdn.microsoft.com/en-us/office/office365/howto/setup-development-environment#bk_Office365Account). If you don't have one of these, you can create a Microsoft account for free at [outlook.com](https://www.outlook.com).
+
 ## Installation
 
-To install and configure the samples, see the instructions in [Installing the Python REST samples](https://github.com/microsoftgraph/python-sample-auth/blob/master/installation.md). Note that the samples in this repo require **User.Read**, **Mail.Send**, **SecurityEvents.Read.All**, and **SecurityEvents.ReadWrite.All** permissions.
+Follow these steps to install the samples:
 
-After you've completed those steps and have received [admin consent](#Get-Admin-consent-to-view-Security-data) for your app, you'll be able to run the ```sample.py``` sample as covered below.
+1. Clone the repo, using one of these commands:
+    * ```git clone https://github.com/microsoftgraph/python-security-rest-sample.git```
+
+2. Create and activate a virtual environment (optional). If you're new to Python virtual environments, [Miniconda](https://conda.io/miniconda.html) is a great place to start.
+3. In the root folder of your cloned repo, install the dependencies for the sample as listed in the ```requirements.txt``` file with this command: ```pip install -r requirements.txt```.
+
+## Configuration
+
+To configure the samples, you'll need to register a new application in the Microsoft [Application Registration Portal](https://apps.dev.microsoft.com/).
+
+Follow these steps to register a new application:
+
+1. Sign in to the [Application Registration Portal](https://apps.dev.microsoft.com/) using either your personal or work or school account.
+
+2. Under **My applications**, choose **Add an app**. If you're using an Office 365 account and see two categories listed (Converged or Azure AD only), choose **Add an app** for the Converged applications section.
+
+3. Enter an application name, and choose **Create**. (Do *not* choose **Guided Setup**.)
+
+4. Next you'll see the registration page for your app. Copy and save the **Application Id** field.You will need it later to complete the configuration process.
+
+5. Under **Application Secrets**, choose **Generate New Password**. A new password will be displayed in the **New password generated** dialog. Copy this password. You will need it later to complete the configuration process.
+
+6. Under **Platforms**, choose **Add platform** > **Web**.
+
+7. Under **Delegated Permissions**, add the permissions/scopes required for the sample. This sample requires **User.Read**, **SecurityEvents.Read.All**, and **SecurityEvents.ReadWrite.All** permissions.
+    >**Note**: See the [Microsoft Graph permissions reference](https://developer.microsoft.com/en-us/graph/docs/concepts/permissions_reference) for more information about Graph's permission model.
+
+8. Enter `http://localhost:5000/login/authorized` as the Redirect URL, and then choose **Save**.
+
+Follow these steps to allow [webhooks](https://developer.microsoft.com/en-us/graph/docs/concepts/webhooks) to access the sample via a NGROK tunnel:
+
+> **Note**: This is required if you want to test the sample Notification Listener on localhost. You must expose a public HTTPS endpoint to create a subscription and receive notifications from Microsoft Graph. While testing, you can use ngrok to temporarily allow messages from Microsoft Graph to tunnel to a localhost port on your computer.
+
+1. Download [ngrok](https://ngrok.com/download).
+2. Follow the installation instructions on the ngrok website.
+3. Run ngrok, if you are using Windows. Run "ngrok.exe http 5000" to start ngrok and open a tunnel to your localhost port 5000.
+4. Then update the `config.py` file with your ngrok url.
+
+    ![ngrok image](static/images/ngrok.PNG)
+
+As the final step in configuring the sample, modify the ```config.py``` file in the root folder of your cloned repo, and follow the instructions to enter your Client ID and Client Secret (which are referred to as Application Id and Password in the app registration portal). Update the `notificationUrl` property in the ```config.py``` file to reflect your ngrok url. Then save the change. After you've completed these steps and have received [admin consent](#Get-Admin-consent-to-view-Security-data) for your app, you'll be able to run the ```sample.py``` sample as covered below.
 
 ## Get Admin consent to view Security data
 
@@ -56,11 +104,11 @@ Once the alert is updated the metadata of the original alert is displayed above 
 
 ![Alerts updated](static/images/updateAlerts.PNG)
 
-Finally, the app enables sending an email notification of the latest alert to be sent from the signed in user's email account that contains information about the alert including the alert ID that allows viewing the alert.
+Finally, the app allows webhook notifications to be sent from the Microsoft Graph to your sample application when an alert matching your webhook resource is updated. In order to view the webhook notifications, create a webhook subscription. Then click "Notify" to open another page that will display webhook notifications as they are pushed to your app.
 
-![Alerts updated](static/images/email.PNG)
+   >**Note:** If you are running this sample on your local machine, then this section requires `ngrok` to properly create and receive notifications.
 
-This sample uses _delegated permissions_ to send mail on behalf of the currently authenticated user, identified as 'me' in Graph API calls. You can also send mail on behalf of other users, if you have administrator consent for the appropriate _application permissions_. See the [Microsoft Graph permissions reference](https://developer.microsoft.com/en-us/graph/docs/concepts/permissions_reference) for more information about Graph's permission model.
+![webhook section](static/images/webhook.PNG)
 
 ## Contributing
 

@@ -11,6 +11,12 @@ CLIENT_ID = 'ENTER_YOUR_APP_ID_HERE'
 CLIENT_SECRET = 'ENTER_YOUR_APP_SECRET_HERE'
 REDIRECT_URI = 'http://localhost:5000/login/authorized'
 
+WEBHOOK_DATA = {'changeType': 'updated',
+    'notificationUrl': 'https://{ NGROK_URL_HERE }/listen',
+    'resource': 'security/alerts',
+    'clientState': 'cLIENTsTATEfORvALIDATION'
+}
+
 # AUTHORITY_URL ending determines type of account that can be authenticated:
 # /organizations = organizational accounts only
 # /consumers = MSAs only (Microsoft Accounts - Live.com, Hotmail.com, etc.)

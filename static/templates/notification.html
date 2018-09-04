@@ -1,0 +1,15 @@
+<!--  Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license.
+      See LICENSE in the source repository root for complete license information. -->
+
+    {% extends "_Layout.html" %}
+    {% block Body %}
+
+        <h2>Notifications</h2>
+        <p>ISG Subscription notifications will appear on this page.</p>
+        <p><b>Note:</b> The page will self-refresh – it may take several seconds for the notification to be displayed.</p>
+
+        <div id="notifications" class="panel-group"></div>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.slim.js"></script>
+        <script src={{ url_for('static', filename='socket.js') }}></script>
+    {% endblock %}

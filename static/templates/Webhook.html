@@ -1,0 +1,156 @@
+<!--  Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license.
+      See LICENSE in the source repository root for complete license information. -->
+
+<form action="{{ url_for('subscribe') }}" method="POST">
+    <h3>Subscribe and listen to alert notifications</h3>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <h4>Create new subscription</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="SelectProvider">Provider</label>
+                    <br>
+                    <select id="SelectProvider" name="Provider" class="form-control" runat="server" value="{{ session.get('alertData').Provider }}" selected="{{ session.get('alertData').Provider }}">
+                        <option value="All" selected="selected">All</option>
+                        {% if session.get('providers') %}
+                            {% for provider in session.get('providers') %}
+                                <option value="{{ provider }}">{{ provider }}</option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="SelectCategory">Category</label>
+                    <select id="SelectCategory" name="Category" class="form-control" runat="server" value="{{ session.get('alertData').Category }}">
+                        <option value="All" selected="selected">All</option>
+                        <option value="abnormalLogin">abnormalLogin</option>
+                        <option value="anomalousDataAccess">anomalousDataAccess</option>
+                        <option value="anonymousLogin">anonymousLogin</option>
+                        <option value="antimalwareActionTaken">antimalwareActionTaken</option>
+                        <option value="azBlackListLogin">azBlackListLogin</option>
+                        <option value="credentialLeakage">credentialLeakage</option>
+                        <option value="documentDeclassification">documentDeclassification</option>
+                        <option value="reconnaissance">reconnaissance</option>
+                        <option value="exploit">exploit</option>
+                        <option value="impossibleTravel">impossibleTravel</option>
+                        <option value="keyloggerTrojan">keyloggerTrojan</option>
+                        <option value="malware">malware</option>
+                        <option value="ransomware">ransomware</option>
+                        <option value="rdpBruteforce">rdpBruteforce</option>
+                        <option value="reportCompromise">reportCompromise</option>
+                        <option value="riskScore">riskScore</option>
+                        <option value="sensitiveFileExfiltration">sensitiveFileExfiltration</option>
+                        <option value="suspiciousActivity">suspiciousActivity</option>
+                        <option value="suspiciousDomain">suspiciousDomain</option>
+                        <option value="suspiciousPowerShell">suspiciousPowerShell</option>
+                        <option value="threatIntelligence">threatIntelligence</option>
+                        <option value="unfamiliarLocation">unfamiliarLocation</option>
+                        <option value="updateRequired">updateRequired</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="SelectSeverity">Severity</label>
+                    <select id="SelectSeverity" name="Severity" class="form-control" runat="server" value="{{ session.get('alertData').Severity }}">
+                        <option value="All" selected="selected">All</option>
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                    </select>
+                </div>
+            </div>
+            <br>
+        </div>
+        <br>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="fqdn">Fully Qualified Domain Name (FQDN)</label>
+                    <input name="HostFqdn" type="text" id="fqdn" class="form-control" value="{{ session.get('alertData').HostFqdn }}" placeholder="Enter FQDN" />
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="upn">User Principal Name (UPN)</label>
+                    <input name="Upn" type="text" id="upn" class="form-control" value="{{ session.get('alertData').Upn }}" placeholder="Enter UPN" />
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="subscribe">&nbsp;</label>
+                    <button class="btn btn-primary form-control" id="subscribe" ng-model="GetAlertsClicked">
+                        <b class="text-center">Subscribe</b>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+<div class="row">
+    <div class="col-md-6">
+        <p>Update the alert that matches the subscription filter and click <b>“Notify”</b>. A notification page will open, self-refresh, and display alert updates. </p>
+    </div>
+    <div class="col-md-2">
+        <button onClick="window.open('/listen');" class="btn btn-primary btn-responsive form-control">
+            <b class="text-center">Notify</b>
+        </button>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-6">
+        <h4>List active subscriptions </h4>
+    </div>
+    <div class="col-md-2">
+        <a href="/Subscribe" class="btn btn-primary btn-responsive form-control" >
+            <b class="text-center">List subscriptions</b>
+        </a>
+    </div>
+</div>
+
+{% if 'webhook_sub' in ViewData%}
+<br>
+
+<div class="panel panel-default" ng-show="GetAlertsClicked">
+    <div class="panel-heading">Subscription details</div>
+    <div class="panel-body">
+        {% if 'UpdateQueryDetails' in ViewData %}
+            {{ ViewData.UpdateQueryDetails }}
+            <br />
+        {% endif %}
+        {% if 'UpdateQueryBody' in ViewData %}
+            {{ ViewData.UpdateQueryBody }}
+            <br />
+            <br />
+        {% endif %}
+        {% if ViewData.webhook_sub|length > 0 %}
+            <b>Subscription Details:</b>
+            {% for sub in ViewData.webhook_sub %}
+                <table class="table table-striped">
+                    <tr>
+                        <th><b>Property</b></th>
+                        <th><b>Details</b></th>
+                    </tr>
+                        {% for prop in sub %}
+                            {% if prop != "clientState" %}
+                                <tr>
+                                    <td>{{ prop }}</td>
+                                    <td>{{ sub[prop] }}</td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                </table>
+                <br>
+            {% endfor %}
+        {% else %}
+            <p><b>No subscriptions found</b></p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

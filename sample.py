@@ -1,6 +1,10 @@
 """sample for Microsoft Graph ISG"""
 # Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license.
 # See LICENSE in the project root for license information.
+import gevent
+from gevent import monkey
+monkey.patch_all()
+
 import base64
 import mimetypes
 import pprint
@@ -13,12 +17,21 @@ from functools import wraps
 
 import flask
 from flask_oauthlib.client import OAuth
+from flask_socketio import SocketIO, emit, join_room
+from flask_session import Session
+import gevent
+from gevent import monkey
+monkey.patch_all()
 
 import config
 
 APP = flask.Flask(__name__, template_folder='static/templates')
 APP.debug = True
 APP.secret_key = 'development'
+APP.config['SESSION_TYPE'] = 'filesystem'
+
+Session(APP)
+socketio = SocketIO(APP, manage_session=False, async_mode="gevent")
 OAUTH = OAuth(APP)
 MSGRAPH = OAUTH.remote_app(
     'microsoft',
@@ -30,26 +43,29 @@ MSGRAPH = OAUTH.remote_app(
     access_token_method='POST',
     access_token_url=config.AUTHORITY_URL + config.TOKEN_ENDPOINT,
     authorize_url=config.AUTHORITY_URL + config.AUTH_ENDPOINT)
-VIEW_DATA = {} #used to store items that should be rendered in the HTML
+
 
 @APP.route('/')
 def homepage():
     """Render the home page."""
+    if 'VIEW_DATA' not in flask.session:
+        flask.session['VIEW_DATA'] = {} #used to store items that should be rendered in the HTML
     if 'access_token' in flask.session:
         if 'email' not in flask.session or 'username' not in flask.session :
             return flask.redirect(flask.url_for('get_my_email_address'))
         if 'SecurityEvents.Read.All' not in flask.session['scopes'] or 'SecurityEvents.ReadWrite.All' not in flask.session['scopes']:
             return flask.render_template('Admin_consent.html', Title="Microsoft Security Graph API demo web application"
                                  ,Year=datetime.date.today().strftime("%Y")
-                                 ,ViewData=VIEW_DATA, Config=config)
+                                 ,ViewData=flask.session['VIEW_DATA'], Config=config)
+    # print("ViewData", flask.session['VIEW_DATA'])
     return flask.render_template('Graph.html', Title="Microsoft Security Graph API demo web application"
                                  ,Year=datetime.date.today().strftime("%Y")
-                                 ,ViewData=VIEW_DATA, Config=config)
+                                 ,ViewData=flask.session['VIEW_DATA'], Config=config)
 
 @APP.route('/login')
 def login():
     """Prompt user to authenticate."""
-    VIEW_DATA.clear()
+    # flask.session['VIEW_DATA'].clear()
     flask.session.clear()
     flask.session['state'] = str(uuid.uuid4())
     return MSGRAPH.authorize(callback=config.REDIRECT_URI, state=flask.session['state'])
@@ -70,13 +86,18 @@ def authorized():
         message = '<strong>Success</strong> Tenant: ' + flask.request.args['tenant'] + ' has given this application admin consent.'
         flask.flash(message, category='success')
         flask.session.pop('access_token', None) 
-        VIEW_DATA.clear()
+        flask.session['VIEW_DATA'].clear()
         return flask.redirect('/')
     # redirected from authentication
-    if str(flask.session['state']) != str(flask.request.args['state']):
+    print("flask.request.args : ", flask.request.args)
+    print("flask.session.state : ", flask.session.get('state'))
+    if flask.session.get('state') and str(flask.session['state']) != str(flask.request.args.get('state')):
         raise Exception('state returned to redirect URL does not match!')
     response = MSGRAPH.authorized_response()
-    #print("authorized response : ", response)
+    # print("authorized response : ", response)
+    expires_in =  datetime.datetime.now() + datetime.timedelta(seconds=response.get('expires_in', 3599))
+    print("access token expires at ", expires_in)
+    flask.session["token_expires_in"] = expires_in
     flask.session['access_token'] = response['access_token']
     flask.session['scopes'] = response['scope'].split()
     flask.session['providers'] = get_providers()
@@ -85,9 +106,10 @@ def authorized():
 def get_providers():
     top_alerts = get_top_security_alert()
     providers = []
-    print(top_alerts)
-    for alert in top_alerts.get('value'):
-        providers.append(alert.get("vendorInformation").get("provider"))
+    # print(top_alerts)
+    if (top_alerts) :
+        for alert in top_alerts.get('value'):
+            providers.append(alert.get("vendorInformation").get("provider"))
     return providers
 
 
@@ -96,7 +118,7 @@ def logout():
     """signs out the current user from the session."""
     #flask.session.pop('access_token', None) 
     flask.session.clear()
-    VIEW_DATA.clear()
+    # flask.session['VIEW_DATA'].clear()
     return flask.redirect(flask.url_for('homepage'))
 
 #Used to decorate methods that require authentication.
@@ -107,6 +129,9 @@ def requires_auth(f):
     if 'access_token' not in flask.session:
       # Redirect to Login page
       return flask.redirect('/login')
+    if flask.session["token_expires_in"] < datetime.datetime.now():
+        #If the access token is expired, require the user to login again
+        return flask.redirect('/login')
     return f(*args, **kwargs)
   return decorated
 
@@ -114,7 +139,7 @@ def requires_auth(f):
 @requires_auth
 def get_my_email_address():
     """Make Rest API call to graph for current users email"""
-    VIEW_DATA.clear() # reset data passed to the Graph.html
+    flask.session['VIEW_DATA'].clear() # reset data passed to the Graph.html
     user_profile = MSGRAPH.get('me', headers=request_headers()).data
     if 'error' in user_profile: ### Access token has expired!
         #print(user_profile)
@@ -132,7 +157,7 @@ def get_alerts():
     if flask.request.method == 'POST':
         result = flask.request.form
         alert_data = {}
-        VIEW_DATA.clear()
+        flask.session['VIEW_DATA'].clear()
         for key in result:
             alert_data[key] = result[key]
         flask.session['alertData'] = alert_data
@@ -146,7 +171,7 @@ def get_alerts():
 
                 return flask.redirect(flask.url_for('login'))
 
-        VIEW_DATA['GetAlertResults'] = filteredAlerts
+        flask.session['VIEW_DATA']['GetAlertResults'] = filteredAlerts
 
         MSGRAPH.base_url = config.RESOURCE + config.API_VERSION + '/'
     return flask.redirect(flask.url_for('homepage'))
@@ -159,27 +184,10 @@ def get_alerts_from_graph():
     if 'AssignedToMe' in alert_data :
         filteredQuery += "assignedTo eq '" + flask.session['email'] +"'"
     if not alert_data:
-        VIEW_DATA['QueryDetails'] = "REST query: '" + MSGRAPH.base_url + 'alerts/?$top=5' + "'"
+        flask.session['VIEW_DATA']['QueryDetails'] = "REST query: '" + MSGRAPH.base_url + 'alerts/?$top=5' + "'"
         return MSGRAPH.get('alerts/?$top=5', headers=request_headers()).data
     else:
-        if (alert_data['Category'] != "All"):
-            filteredQuery += 'category eq ' if (len(filteredQuery) == 0) else '&category eq '
-            filteredQuery += "'{}'".format(alert_data['Category'])
-        if (alert_data['Provider'] != "All"):
-            filteredQuery += 'vendorInformation/provider eq ' if (len(filteredQuery) == 0) else '&vendorInformation/provider eq '
-            filteredQuery += "'{}'".format(alert_data['Provider'])
-        if (alert_data['Status'] != "All"):
-            filteredQuery += 'Status eq ' if (len(filteredQuery) == 0) else '&Status eq '
-            filteredQuery += "'{}'".format(alert_data['Status'])
-        if (alert_data['Severity'] != "All"):
-            filteredQuery += 'Severity eq ' if (len(filteredQuery) == 0) else '&Severity eq '
-            filteredQuery += "'{}'".format(alert_data['Severity'])
-        if (alert_data['HostFqdn'] != ""):
-            filteredQuery += 'hostState/fqdn eq ' if (len(filteredQuery) == 0) else '&hostState/fqdn eq '
-            filteredQuery += "'{}'".format(alert_data['HostFqdn'])
-        if (alert_data['Upn'] != ""):
-            filteredQuery += 'userPrincipalName eq ' if (len(filteredQuery) == 0) else '&userPrincipalName eq '
-            filteredQuery += "'{}'".format(alert_data['Upn'])
+        filteredQuery += build_filter_query(alert_data)
         filteredQuery += '$top=' if (len(filteredQuery) == 0) else '&$top='
         filteredQuery += alert_data['Top']
 
@@ -188,9 +196,32 @@ def get_alerts_from_graph():
         addFilter = '$filter='
 
     query = "alerts/?" + addFilter + filteredQuery
-    VIEW_DATA['QueryDetails'] = query
+    flask.session['VIEW_DATA']['QueryDetails'] = query
     query = urllib.parse.quote(query,safe="/?$='&") #cleans up the url
     return MSGRAPH.get(query, headers=request_headers()).data
+
+def build_filter_query(form):
+    filteredQuery = ""
+    if ('Category'in form and form['Category'] != "All"):
+        filteredQuery += 'category eq ' if (len(filteredQuery) == 0) else ' and category eq '
+        filteredQuery += "'{}'".format(form['Category'])
+    if ('Provider' in form and form['Provider'] != "All"):
+        filteredQuery += 'vendorInformation/provider eq ' if (len(filteredQuery) == 0) else ' and vendorInformation/provider eq '
+        filteredQuery += "'{}'".format(form['Provider'])
+    if ('Status' in form and form['Status'] != "All"):
+        filteredQuery += 'Status eq ' if (len(filteredQuery) == 0) else ' and Status eq '
+        filteredQuery += "'{}'".format(form['Status'])
+    if ('Severity' in form and form['Severity'] != "All"):
+        filteredQuery += 'Severity eq ' if (len(filteredQuery) == 0) else ' and Severity eq '
+        filteredQuery += "'{}'".format(form['Severity'])
+    if ('HostFqdn' in form and form['HostFqdn'] != ""):
+        filteredQuery += "hostStates/any(a:a/fqdn eq " if (len(filteredQuery) == 0) else ' and hostStates/any(a:a/fqdn eq '
+        filteredQuery += "'{}')".format(form['HostFqdn'])
+    if ('Upn' in form and form['Upn'] != ""):
+        filteredQuery += 'userStates/any(a:a/userPrincipalName eq ' if (len(filteredQuery) == 0) else ' and userStates/any(a:a/userPrincipalName eq '
+        filteredQuery += "'{}')".format(form['Upn'])
+    return filteredQuery
+
 
 @APP.route('/DisplayAlert/<alertId>')
 @requires_auth
@@ -216,6 +247,8 @@ def get_alert_by_id(alertId):
        alert = None
     elif 'error' in alert:
         alert = None
+    elif '@odata.context' in alert: # remove ODATA entity
+        del alert['@odata.context']
     MSGRAPH.base_url = config.RESOURCE + config.API_VERSION + '/'
     return alert
 
@@ -242,6 +275,61 @@ def get_top_security_alert():
     MSGRAPH.base_url = config.RESOURCE + config.API_VERSION + '/'
     return most_recent_alert
 
+def create_webhook_subscription(webhook_body):
+    """Helper to create a webhook subscription."""
+    MSGRAPH.base_url = config.RESOURCE
+    subscription = MSGRAPH.post(config.ISG_VERSION + '/subscriptions', data=webhook_body, headers=request_headers(), format='json').data
+    print("Create subscription response", subscription)
+    if b'' in subscription:
+        print("Please Sign-in using a on.microsoft.com account for demo data")
+        subscription = None
+    elif 'error' in subscription:
+        if subscription['error']['code'] == 'InvalidAuthenticationToken':
+            return flask.redirect(flask.url_for('login'))
+        if subscription['error']['message'] == 'Subscription validation request failed. Must respond with 200 OK to this request.':
+            message = "<strong>Error:</strong> Please run 'ngrok' to allow the webhook notification sevice to access your app, then update the config.py file to the correct ngrok url."
+            flask.flash(message, category='danger')
+    else:
+        message = '<strong>Success</strong> Webhook subscription created. Id: ' + subscription.get('id')
+        flask.flash(message, category='success')
+
+    MSGRAPH.base_url = config.RESOURCE + config.API_VERSION + '/'
+    return subscription
+
+def update_webhook_subscription(subscription_id, webhook_body):
+    """Helper to update a webhook subscription."""
+    MSGRAPH.base_url = config.RESOURCE 
+    subscription = MSGRAPH.patch(config.ISG_VERSION + '/subscriptions/' + subscription_id , data=webhook_body, headers=request_headers(), format='json').data
+    print("Update subscription response", subscription)
+    if b'' in subscription:
+        print("Please Sign-in using a on.microsoft.com account for demo data")
+        subscription = None
+    elif 'error' in subscription:
+        if subscription['error']['code'] == 'InvalidAuthenticationToken':
+            return flask.redirect(flask.url_for('login'))
+    else:
+        message = '<strong>Success</strong> Webhook subscription updated. Id: ' + subscription.get('id')
+        flask.flash(message, category='success')
+
+    MSGRAPH.base_url = config.RESOURCE + config.API_VERSION + '/'
+    return subscription
+
+def get_webhook_subscriptions():
+    """Helper to get all current webhook subscriptions for the application."""
+    MSGRAPH.base_url = config.RESOURCE    
+    # print("MSGRAPH.base_url", MSGRAPH.base_url) 
+    subscriptions = MSGRAPH.get(config.ISG_VERSION + '/subscriptions').data
+    print("Active subscriptions :", subscriptions)
+    if b'' in subscriptions:
+        print("Please Sign-in using a on.microsoft.com account for demo data")
+        subscriptions = None
+    elif 'error' in subscriptions:
+        if subscriptions['error']['code'] == 'InvalidAuthenticationToken':
+
+            return flask.redirect(flask.url_for('login'))
+
+    MSGRAPH.base_url = config.RESOURCE + config.API_VERSION + '/'
+    return subscriptions
 
 @APP.route('/UpdateAlert', methods = ['POST', 'GET'])
 @requires_auth
@@ -250,20 +338,20 @@ def update_alert():
     if flask.request.method == 'POST':
         flask.session.pop('UpdateAlertData', None)
         result = flask.request.form
-        VIEW_DATA.clear()
+        flask.session['VIEW_DATA'].clear()
         alert_data = {_:result[_] for _ in result} #Iterate over html form POST from Graph.html
         if alert_data.get('AlertId'): # Id form was not empty
             alert_data['AlertId'] = alert_data.get('AlertId').strip(' ')
         else:
-            VIEW_DATA['UpdateAlertError'] = "Please enter valid alert Id"
+            flask.session['VIEW_DATA']['UpdateAlertError'] = "Please enter valid alert Id"
             return flask.redirect(flask.url_for('homepage'))
         alertId = alert_data['AlertId']
         old_alert = get_alert_by_id(alertId) # store old alert before updating it
         if not old_alert: # alert not found
-            VIEW_DATA['UpdateAlertError'] = "No alert matching this ID " + alertId + " was found"
+            flask.session['VIEW_DATA']['UpdateAlertError'] = "No alert matching this ID " + alertId + " was found"
             return flask.redirect(flask.url_for('homepage'))
         else: 
-            VIEW_DATA['OldAlert'] = old_alert
+            flask.session['VIEW_DATA']['OldAlert'] = old_alert
             properties_to_update = {}
             properties_to_update["assignedTo"] = flask.session['email']
             if alert_data.get("SelectStatusToUpdate") != "Unknown":
@@ -271,7 +359,10 @@ def update_alert():
             if alert_data.get("SelectFeedbackToUpdate") != "Unknown":
                 properties_to_update["feedback"] = alert_data.get("SelectFeedbackToUpdate")
             if alert_data.get("Comments") != "":
-                properties_to_update["comments"] = alert_data.get("Comments")
+                comments = old_alert.get("comments")
+                new_comment= alert_data.get("Comments")
+                comments.append(new_comment)
+                properties_to_update["comments"] = comments
             # include the required vendor information in the body of the PATCH
             properties_to_update["vendorInformation"] = old_alert.get("vendorInformation")
             # update the alert
@@ -279,48 +370,93 @@ def update_alert():
             # make another call to graph to get the updated alert
             updated_alert = get_alert_by_id(alertId)
             #store the alert to be rendered in the table in Graph.html
-            VIEW_DATA['UpdateAlertResults'] = updated_alert
-            VIEW_DATA['UpdateQueryDetails'] = "REST query PATCH: '" + config.ISG_URL +"alerts/" + alertId + "'"
-            VIEW_DATA['UpdateQueryBody'] = "Request Body: " + json.dumps(properties_to_update, sort_keys=True, indent=4, separators=(',', ': '))
+            flask.session['VIEW_DATA']['UpdateAlertResults'] = updated_alert
+            flask.session['VIEW_DATA']['UpdateQueryDetails'] = "REST query PATCH: '" + config.ISG_URL +"alerts/" + alertId + "'"
+            flask.session['VIEW_DATA']['UpdateQueryBody'] = "Request Body: " + json.dumps(properties_to_update, sort_keys=True, indent=4, separators=(',', ': '))
         flask.session['UpdateAlertData'] = alert_data
     return flask.redirect(flask.url_for('homepage'))
 
-@APP.route('/EmailAlert', methods = ['POST', 'GET'])
+@APP.route('/Subscribe', methods = ['POST', 'GET'])
 @requires_auth
-def email_alert():
-    """Handler for email_alert route."""
+def subscribe():
     if flask.request.method == 'POST':
-        VIEW_DATA.clear()
-        emails = flask.request.form   
-        VIEW_DATA['EmailRecipients'] = emails.get('recipients')
-        if not emails.get('recipients'):
-            VIEW_DATA['EmailResults'] = "Please enter an email address."
+        flask.session['VIEW_DATA'].clear()
+        webhook_form = {}
+        for key in flask.request.form:
+            webhook_form[key] = flask.request.form[key]
+        flask.session['VIEW_DATA']['WebhookForm'] = webhook_form
+        filter_query = build_filter_query(webhook_form)
+        print("filter_query: ", filter_query)
+        if filter_query == '':
+            message = '<strong>Error:</strong> Subscription requires at least one filter parameter.'
+            flask.flash(message, category='danger')
             return flask.redirect(flask.url_for('homepage'))
         else:
-            most_recent_alert = get_top_security_alert()
-            if most_recent_alert:
-                most_recent_alert = most_recent_alert.get('value')
-            if most_recent_alert:
-                most_recent_alert = most_recent_alert[0]
+            webhook_body = config.WEBHOOK_DATA
+            webhook_body['resource'] = 'security/alerts?$filter=' + filter_query
 
-                # build the email message
-                message_subject = "New Alert - '" + most_recent_alert['title'] + "' of Category '" + most_recent_alert['category'] + "' from Provider '" + most_recent_alert.get('vendorInformation')['provider'] + "'"
-                message_body = "<p>Alert Created: " + most_recent_alert['createdDateTime']  + "</p>" \
-                            + "<p>Description: " + most_recent_alert['description'] + "</p>" \
-                            + "<p>Alert Id: " + most_recent_alert['id']  + "</p>" \
-                            + "<p>MS Graph Explorer URL '" + config.ISG_URL + "alerts/" +  most_recent_alert['id'] + "'</p>"
-                # send the email 
-                response = sendmail(client=MSGRAPH,
-                                subject=message_subject,
-                                recipients=emails.get('recipients').split(','),
-                                body=message_body)
-                response_json = pprint.pformat(response.data)
-                if response_json != "b''": # the email message was not sent
-                    return flask.redirect(flask.url_for('login'))
-                VIEW_DATA['EmailResults'] = "Email sent to " + emails.get('recipients') + "."
+            active_subscriptions = get_webhook_subscriptions() # Check subscriptions to prevent repeat
+            expirationDateTime = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+            old_sub = None
+            if len(active_subscriptions) > 0:
+                for sub in active_subscriptions.get('value'):
+                    if sub.get('resource') == webhook_body['resource']:
+                        print("repeated resource")
+                        old_sub = sub
+                        break
+            if old_sub: # PATCH the current webhook subscription instead of creating a duplicate subscription
+                webhook_body = {}
+                webhook_body['expirationDateTime'] = expirationDateTime.isoformat() + "Z"
+                response = update_webhook_subscription(old_sub.get("id"), webhook_body)
+                if response :
+                    print("PATCH response: ", response)
+                    flask.session['VIEW_DATA']["webhook_sub"] = [response]
+                    flask.session['VIEW_DATA']['UpdateQueryDetails'] = "REST query PATCH: '" + config.RESOURCE + config.ISG_VERSION + "/subscriptions/" + old_sub.get("id") + "'"
+                    flask.session['VIEW_DATA']['UpdateQueryBody'] = "Request Body: " + json.dumps(webhook_body, sort_keys=True, indent=4, separators=(',', ': '))
             else:
-                VIEW_DATA['EmailResults'] = "No alert to send"
+                webhook_body['expirationDateTime'] = expirationDateTime.isoformat() + "Z"
+                print('expirationDateTime', webhook_body['expirationDateTime'])
+                print('webhook_body', webhook_body)
+                response = create_webhook_subscription(webhook_body)
+                if response :
+                    print("POST response: ", response)
+                    flask.session['VIEW_DATA']["webhook_sub"] = [response]
+                    flask.session['VIEW_DATA']['UpdateQueryDetails'] = "REST query POST: '" + config.RESOURCE + config.ISG_VERSION + "/subscriptions'"
+                    flask.session['VIEW_DATA']['UpdateQueryBody'] = "Request Body: " + json.dumps(webhook_body, sort_keys=True, indent=4, separators=(',', ': '))
+
+    if flask.request.method == 'GET':
+        flask.session['VIEW_DATA'].clear()
+        active_subscriptions = get_webhook_subscriptions()
+        if active_subscriptions :
+                flask.session['VIEW_DATA']["webhook_sub"] = active_subscriptions.get('value')
+                flask.session['VIEW_DATA']['UpdateQueryDetails'] = "REST query GET: '" + config.RESOURCE + config.ISG_VERSION + "/subscriptions'"
+
     return flask.redirect(flask.url_for('homepage'))
+
+@APP.route('/listen', methods = ['POST', 'GET'])
+def listen():
+    if flask.request.method == 'POST':
+        validationToken = flask.request.args.get('validationToken', '')
+        if validationToken != '':
+            return flask.make_response(validationToken, 200)
+        else:
+            notification = flask.request.get_json()
+            print('notification_received :', notification)
+            if notification['value'] and len(notification['value']) > 0:
+                sess = notification['value'][0].get('clientState')
+                if sess:
+                    socketio.emit("notification_received", notification, namespace='/listen') 
+
+            return flask.make_response('',202)
+
+    if flask.request.method == 'GET': 
+        return flask.render_template('notification.html', Title="Microsoft Security Graph API demo web application"
+                                 ,Year=datetime.date.today().strftime("%Y"))
+
+
+@socketio.on('connect', namespace='/listen')
+def test_connect():
+    print("connected")
 
 
 @MSGRAPH.tokengetter
@@ -341,56 +477,7 @@ def request_headers(headers=None):
     return default_headers
 
 
-def sendmail(*, client, subject=None, recipients=None, body='',
-             content_type='HTML', attachments=None):
-    """Helper to send email from current user.
-
-    client       = user-authenticated flask-oauthlib client instance
-    subject      = email subject (required)
-    recipients   = list of recipient email addresses (required)
-    body         = body of the message
-    content_type = content type (default is 'HTML')
-    attachments  = list of file attachments (local filenames)
-
-    Returns the response from the POST to the sendmail API.
-    """
-
-    # Verify that required arguments have been passed.
-    if not all([client, subject, recipients]):
-        raise ValueError('sendmail(): required arguments missing')
-
-    #print('recipients : ', recipients )
-
-    # Create recipient list in required format.
-    recipient_list = [{'EmailAddress': {'Address': address.strip()}}
-                      for address in recipients]
-
-    # Create list of attachments in required format.
-    attached_files = []
-    if attachments:
-        for filename in attachments:
-            b64_content = base64.b64encode(open(filename, 'rb').read())
-            mime_type = mimetypes.guess_type(filename)[0]
-            mime_type = mime_type if mime_type else ''
-            attached_files.append( \
-                {'@odata.type': '#microsoft.graph.fileAttachment',
-                 'ContentBytes': b64_content.decode('utf-8'),
-                 'ContentType': mime_type,
-                 'Name': filename})
-
-    # Create email message in required format.
-    email_msg = {'Message': {'Subject': subject,
-                             'Body': {'ContentType': content_type, 'Content': body},
-                             'ToRecipients': recipient_list,
-                             'Attachments': attached_files},
-                 'SaveToSentItems': 'true'}
-
-    # Do a POST to Graph's sendMail API and return the response.
-    return client.post('me/microsoft.graph.sendMail',
-                       headers=request_headers(),
-                       data=email_msg,
-                       format='json')
-
-
 if __name__ == '__main__':
-    APP.run()
+
+    socketio.run(APP)
+

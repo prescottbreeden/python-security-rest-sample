@@ -247,9 +247,10 @@
     </div>
 </form>
 
-<br>
 
 {% if 'UpdateAlertResults' in ViewData or 'UpdateAlertError' in ViewData %}
+<br>
+
 <div class="panel panel-default" ng-show="GetAlertsClicked">
     <div class="panel-heading">Alert details</div>
     <div class="panel-body">
@@ -324,27 +325,9 @@
     </div>
 </div>
 {% endif %}
-<hr>
 
-<form action="{{ url_for('email_alert') }}" method="POST">
-    <h3>Send email notification for latest alert</h3>
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-5">
-                <label for="recipients">Recipients</label>
-                <input name="recipients" id="recipients" type="text" class="form-control" value="{% if 'EmailRecipients' in ViewData %}{{ ViewData['EmailRecipients'] }}{% elif session.get('email') %}{{ session.get('email') }}{% endif %}" placeholder="Enter recipients email addresses, seperated by semicolon" />
-            </div>
-            <div class="col-md-2">
-                <label for="send-email">&nbsp;</label>
-                <button class="btn btn-primary form-control" id="send-email">
-                    <b class="text-center">Send email</b>
-                </button>
-            </div>
-        </div>
-    </div>
-</form>
-{% if 'EmailResults' in ViewData %}
-{{ ViewData['EmailResults'] }}
-{% endif %}
+<hr>
+{% include "Webhook.html" %}
 
 {% endblock %}
+
