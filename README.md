@@ -85,7 +85,7 @@ Where APPLICATION_ID is the application ID and REDIRECT_URL is the Redirect URL 
 
 4. When the tenant Admin agrees to this dialog, he/she is granting consent for all users of their organization to use this application.
 
-> **Note:** For more details about the Authenticaion flow, read [Authorization and the Microsoft Graph Security API](https://developer.microsoft.com/en-us/graph/docs/concepts/security-authorization)
+> **Note:** For more details about the Authorization flow, read [Authorization and the Microsoft Graph Security API](https://developer.microsoft.com/en-us/graph/docs/concepts/security-authorization)
 
 ## Running the sample
 
