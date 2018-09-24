@@ -83,7 +83,7 @@ Where APPLICATION_ID is the application ID and REDIRECT_URL is the Redirect URL 
 
    ![Scope consent dialog](static/images/Scope.png)
 
-4. When the tenant Admin agrees to this dialog, he/she is granting consent for all users of their organization to this application.
+4. When the tenant Admin agrees to this dialog, he/she is granting consent for all users of their organization to use this application.
 
 ## Running the sample
 
