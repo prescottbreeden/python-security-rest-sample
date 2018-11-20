@@ -12,7 +12,7 @@ See LICENSE in the source repository root for complete license information. -->
     <div class="col-md-12">
         <h4>Your Tenant admin has not given consent to this application. </h4>
         <p>
-            This application requires <code>'SecurityEvents.Read.All' and 'SecurityEvents.ReadWrite.All'</code>
+            This application requires <code>'SecurityEvents.ReadWrite.All'</code>
             permissions to access the Secuirty API, You currently have <code>{{ session.get('scopes') }}</code>
             permissions.
         </p>
@@ -26,10 +26,10 @@ See LICENSE in the source repository root for complete license information. -->
         <a href="https://login.microsoftonline.com/common/adminconsent?client_id={{ Config.CLIENT_ID }}&amp;redirect_uri={{ Config.REDIRECT_URI }}">https://login.microsoftonline.com/common/adminconsent?client_id={{ Config.CLIENT_ID }}&amp;redirect_uri={{ Config.REDIRECT_URI }}</a>
         <hr>
         <p>
-            <b>If your tenant admin has given consent</b>, Then you are missing the <em>'SecurityEvents.Read.All' or 
+            <b>If your tenant admin has given consent</b>, Then you are missing the <em>
             'SecurityEvents.ReadWrite.All'</em> permissions in your app registration. Please go to 
             <a href="https://apps.dev.microsoft.com">https://apps.dev.microsoft.com,</a>to add 
-            <em>'SecurityEvents.Read.All' and 'SecurityEvents.ReadWrite.All'</em> to the delegated permissions in your application.
+            <em>'SecurityEvents.ReadWrite.All'</em> to the delegated permissions in your application.
             then have the admin consent to the updated permissions.
         </p>
     </div>

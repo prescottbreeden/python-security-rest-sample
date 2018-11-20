@@ -53,7 +53,7 @@ def homepage():
     if 'access_token' in flask.session:
         if 'email' not in flask.session or 'username' not in flask.session :
             return flask.redirect(flask.url_for('get_my_email_address'))
-        if 'SecurityEvents.Read.All' not in flask.session['scopes'] or 'SecurityEvents.ReadWrite.All' not in flask.session['scopes']:
+        if 'SecurityEvents.ReadWrite.All' not in flask.session['scopes']:
             return flask.render_template('Admin_consent.html', Title="Microsoft Security Graph API demo web application"
                                  ,Year=datetime.date.today().strftime("%Y")
                                  ,ViewData=flask.session['VIEW_DATA'], Config=config)

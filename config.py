@@ -28,7 +28,7 @@ TOKEN_ENDPOINT = '/oauth2/v2.0/token'
 
 RESOURCE = 'https://graph.microsoft.com/'
 API_VERSION = 'v1.0'
-ISG_VERSION = 'beta'
+ISG_VERSION = 'v1.0'
 ISG_URL = RESOURCE + ISG_VERSION +'/security/'
 SCOPES = ['User.Read'] # Add other scopes/permissions as needed.
 
