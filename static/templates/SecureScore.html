@@ -1,0 +1,158 @@
+<!--  Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license.
+      See LICENSE in the source repository root for complete license information. -->
+
+    {% extends "_Layout.html" %}
+    {% block Body %}
+    
+    <h1>{{ Title }}</h1>
+    <hr>
+    <div class="card">
+        <div class="card-header"><b>Secure score details</b></div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-4">
+                    <Span>&nbsp;</Span>
+                    <h5 class="text-center"><Span>Current Score: {{ session.secure_scores.currentScore|int }} / Max Score: {{ session.secure_scores.maxScore|int }}</Span></h5>  
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: {{ (session.secure_scores.currentScore/session.secure_scores.maxScore *100) }}%" aria-valuenow='{{ (session.secure_scores.currentScore/session.secure_scores.maxScore *100) }}' aria-valuemin="0" aria-valuemax="{{ session.secure_scores.maxScore|int }}"></div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <b>Current Score: </b>{{ session.secure_scores.currentScore|int }} <br>
+                    <b>Max Score: </b>{{ session.secure_scores.maxScore|int }} <br>
+                    <b>Enabled Services: </b>{{ session.secure_scores.enabledServices|join(', ')|replace("Has", "") }}
+                </div>
+                <div class="col-4">
+                        <b>Score Date: </b>{{ session.secure_scores.createdDateTime }} <br>
+                        <b>Licensed user count: </b>{{ session.secure_scores.licensedUserCount|int }}<br>
+                        <b>Active user count: </b>{{ session.secure_scores.activeUserCount|int }}
+                    </div>
+            </div>
+        </div>
+    </div>
+    <p></p>
+    <b>Rest Query: </b>
+    <a href="https://developer.microsoft.com/graph/graph-explorer?request=security/secureScores?$top=1&method=GET&version={{ Config.SECURESCORE_VERSION }}&GraphUrl=https://graph.microsoft.com">https://graph.microsoft.com/{{ Config.SECURESCORE_VERSION }}/security/secureScores?$top=1</a>            
+    
+    <hr>
+    <h2>Control Scores</h2>
+    <div class="container-fluid">
+        <style>
+            .hiddenRow {
+                padding: 0 !important;
+            }
+        </style>
+        <div class="table-responsive rounded">
+            <table class="table table-condensed table-striped" style="border-collapse:collapse;">
+                <thead class="thead-dark">
+                    <tr>
+                        <th></th>
+                        <th>Control Name</th>
+                        <th>Control Category</th>
+                        <th>Score</th>
+                        <th>Count / Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in session.secure_scores.controlScores %}
+                    <tr data-toggle="collapse" data-target="#{{ item.controlName  }}" class="accordion-toggle">
+                        <td><i class='fas fa-angle-down' style='font-size:24px'></i></td>
+                        <td>{{ item.controlName  }}</td>
+                        <td>{{ item.controlCategory  }}</td>
+                        <td>{{ item.score }}</td>
+                        <td>{{ item.count or 0 }} / {{ item.total or 0 }}</td>
+                    </tr>
+                    <tr >
+                        <td colspan="5" class="hiddenRow"><div class="accordian-body collapse m-lg-2" id="{{ item.controlName  }}"><b>Description: </b>{{ item.description }} </div> </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <hr>
+
+    <h2>Control Profiles</h2>
+    <b>Rest Query: </b>
+    <a href="https://developer.microsoft.com/graph/graph-explorer?request=security/secureScoreControlProfiles&method=GET&version={{ Config.SECURESCORE_VERSION }}&GraphUrl=https://graph.microsoft.com">https://graph.microsoft.com/{{ Config.SECURESCORE_VERSION }}/security/secureScoreControlProfiles</a>
+    <div class="card-body">
+        <style>
+            .hiddenRow {
+                padding: 0 !important;
+            }
+        </style>
+        <div class="table-responsive rounded">
+            <table class="table table-condensed table-striped" style="border-collapse:collapse;">
+                <thead class="thead-dark">
+                    <tr>
+                        <th></th>
+                        <th>Control Title</th>
+                        <th>Control Category</th>
+                        <th>Max Score</th>
+                        <th>User Impact</th>
+                        <th>Implementation Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in session.secure_score_profiles %}
+                    <tr data-toggle="collapse" data-target="#{{ item.id  }}" class="accordion-toggle">
+                        <td><i class='fas fa-angle-down' style='font-size:24px'></i></td>
+                        <td>{{ item.title  }}</td>
+                        <td>{{ item.controlCategory  }}</td>
+                        <td>{{ item.maxScore }}</td>
+                        <td>{{ item.userImpact }}</td>
+                        <td>{{ item.implementationCost }}</td>
+                    </tr>
+                    <tr >
+                        <td colspan="6" class="hiddenRow">
+                            <div class="container-fluid accordian-body collapse m-lg-2" id="{{ item.id  }}">
+                                <div class="row">
+                                    <div class="col-8">
+                                        <b>Last Modified: </b> {{ item.lastModifiedDateTime }}</br>
+                                        <b>Remediation: </b> {{ item.remediation|safe }}</br>
+                                        <b>Action URL: </b> <a href="{{ item.actionUrl }}" style="overflow-wrap: break-word; word-wrap:break-word; word-break: break-all; word-break: break-word; -ms-word-break: break-all;"> {{ item.actionUrl }}</a></br>
+                                        <b>Deprecated: </b> {{ item.deprecated }}</br>
+                                        <b>Service: </b> {{ item.service }}</br>
+                                        <b>Tier: </b> {{ item.tier }}</br>
+                                    </div>
+                                    <div class="col-4">
+                                        <b>Category: </b>{{ item.controlCategory }}</br>
+                                        <b>Max Score: </b>{{ item.maxScore }}</br>
+                                        <b>User Impact: </b>{{ item.userImpact }}</br>
+                                        <b>Implementation Cost: </b>{{ item.implementationCost }}</br>
+                                        <b>Rank: </b>{{ item.rank }}</br>
+                                    </div>
+                                </div>
+                                <table class="table table-striped">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th>Assigned To</th>
+                                            <th>Comment</th>
+                                            <th>State</th>
+                                            <th>Updated By</th>
+                                            <th>Updated DateTime</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for stateUpdate in item.controlStateUpdates %}
+                                            <tr>
+                                                <td>{{ stateUpdate.assignedTo }}</td>
+                                                <td>{{ stateUpdate.comment }}</td>
+                                                <td>{{ stateUpdate.state }}</td>
+                                                <td>{{ stateUpdate.updatedBy }}</td>
+                                                <td>{{ stateUpdate.updatedDateTime }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% endblock %}

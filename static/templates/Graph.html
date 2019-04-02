@@ -5,6 +5,11 @@
 {% block Body %}
 
 <h1>{{ Title }}</h1>
+<hr>
+
+{% include "_SecureScorePartial.html" %}
+
+<!-- 
 <div class="container-fluid">
     <label>Click "Analyst logon" button to get started</label>
     <div class="row">
@@ -19,9 +24,7 @@
             {% endif %}
         </div>
     </div>
-</div>
-<hr>
-
+</div> -->
 
 <form action="{{ url_for('get_alerts') }}" method="POST">
     <h3>Select alerts to view</h3>
@@ -31,9 +34,9 @@
                 <div class="form-group">
                     <label for="SelectTop">Top X</label>
                     <select id="SelectTop" class="form-control" name="Top" runat="server" value="{{ session.get('alertData').Top }}">
-                        <option value=1>1</option>
+                        <option value=1 selected="selected">1</option>
                         <option value=2>2</option>
-                        <option value=5 selected="selected">5</option>
+                        <option value=5>5</option>
                         <option value=10>10</option>
                     </select>
                 </div>
@@ -133,7 +136,7 @@
             <div class="col-md-2">
                 <div class="form-group">
                     <label for="get-alerts">&nbsp;</label>
-                    <button class="btn btn-primary form-control" id="get-alerts" ng-model="GetAlertsClicked">
+                    <button class="btn btn-primary form-control" id="get-alerts">
                         <b class="text-center">Get alerts</b>
                     </button>
                 </div>
@@ -143,47 +146,51 @@
 </form>
 
 {% if 'GetAlertResults' in ViewData %}
-<div class="panel panel-default">
-    <div class="panel-heading">Alert details</div>
-    <div class="panel-body">
+<div class="card">
+    <div class="card-header">Alert details</div>
+    <div class="card-body">
         <div class="container-fluid col-md-12">
-            REST query: <a href="https://developer.microsoft.com/en-us/graph/graph-explorer?request=security/{{ ViewData.get('QueryDetails') }}&method=GET&version={{ Config.ISG_VERSION }}&GraphUrl=https://graph.microsoft.com">'{{ Config.ISG_URL }}{{ ViewData.get('QueryDetails') }}'</a>
+            REST query: <a href="https://developer.microsoft.com/en-us/graph/graph-explorer?request=security/{{ ViewData.get('QueryDetails') }}&method=GET&version={{ Config.SECURITYAPI_VERSION }}&GraphUrl=https://graph.microsoft.com">'{{ Config.SECURITYAPI_URL }}{{ ViewData.get('QueryDetails') }}'</a>
             <br />
             <br />
             {% if ViewData.get('GetAlertResults') == 'Incorrect Tenant Account' %}
             Please sign in using a *.onmicrosoft.com account to view the demo data.
             {% elif ViewData.get('GetAlertResults').value %}
 
-            <table>
-                <tr>
-                    <th><b>Title</b></th>
-                    <th><b>Category</b></th>
-                    <th><b>Severity</b></th>
-                    <th><b>Status</b></th>
-                    <th><b>Provider</b></th>
-                    <th><b>AssignedTo</b></th>
-                    <th><b>ID</b></th>
-                </tr>
-
-                {% for alert in ViewData.get('GetAlertResults').value %}
-                <tr>
-                    <td>
-                        <a href="/DisplayAlert/{{ alert.id }}" target="_blank\">
-                            <div style="height:100%;width:100%">
-                                {{ alert.title }}
-                            </div>
-                        </a>
-                    </td>
-                    <td>{% if alert.category %} {{alert.category}} {% else %} {% endif %}</td>
-                    <td>{% if alert.severity %} {{ alert.severity }} {% else %} {% endif %}</td>
-                    <td>{{ alert.status }}</td>
-                    <td>{{ alert.vendorInformation.provider }}</td>
-                    <td>{% if alert.assignedTo %}{{ alert.assignedTo }} {% else %} {% endif %}</td>
-                    <td>{{ alert.id }}</td>
-                </tr>
-                {% endfor %}
-
-            </table>
+            <div class="table-responsive rounded">
+                <table class="table table-striped">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th scope="col">Title</th>
+                            <th scope="col">Category</th>
+                            <th scope="col">Severity</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Provider</th>
+                            <th scope="col">AssignedTo</th>
+                            <th scope="col">ID</th>
+                        </tr>
+                    </thead> 
+                    <tbody>    
+                    {% for alert in ViewData.get('GetAlertResults').value %}
+                    <tr>
+                        <td scope="row">
+                            <a href="/DisplayAlert/{{ alert.id }}" target="_blank\">
+                                <div style="height:100%;width:100%">
+                                    {{ alert.title }}
+                                </div>
+                            </a>
+                        </td>
+                        <td>{% if alert.category %} {{alert.category}} {% else %} {% endif %}</td>
+                        <td>{% if alert.severity %} {{ alert.severity }} {% else %} {% endif %}</td>
+                        <td>{{ alert.status }}</td>
+                        <td>{{ alert.vendorInformation.provider }}</td>
+                        <td>{% if alert.assignedTo %}{{ alert.assignedTo }} {% else %} {% endif %}</td>
+                        <td>{{ alert.id }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
             {% else %}
             No matching alerts
             {% endif %}
@@ -251,9 +258,9 @@
 {% if 'UpdateAlertResults' in ViewData or 'UpdateAlertError' in ViewData %}
 <br>
 
-<div class="panel panel-default" ng-show="GetAlertsClicked">
-    <div class="panel-heading">Alert details</div>
-    <div class="panel-body">
+<div class="card" ng-show="GetAlertsClicked">
+    <div class="card-header">Alert details</div>
+    <div class="card-body">
         {% if 'UpdateQueryDetails' in ViewData %}
         {{ ViewData.UpdateQueryDetails }}
         <br />
@@ -261,64 +268,76 @@
         <br />
         <br />
         <b>Original Alert Details:</b>
-        <table>
-            <tr>
-                <th><b>Title</b></th>
-                <th><b>Category</b></th>
-                <th><b>Severity</b></th>
-                <th><b>Status</b></th>
-                <th><b>Feedback</b></th>
-                <th><b>Provider</b></th>
-                <th><b>AssignedTo</b></th>
-                <th><b>Comments</b></th>
-            </tr>
-            <tr>
-                <td>
-                    <a href="/DisplayAlert/{{ ViewData.OldAlert.id }}" target="_blank\">
-                        <div style="height:100%;width:100%">
-                            {{ ViewData.OldAlert.title }}
-                        </div>
-                    </a>
-                </td>
-                <td>{{ ViewData.OldAlert['category'] }}</td>
-                <td>{% if ViewData.OldAlert['severity'] %} {{ ViewData.OldAlert['severity'] }} {% else %} {% endif %}</td>
-                <td>{{ ViewData.OldAlert['status'] }}</td>
-                <td>{{ ViewData.OldAlert['feedback'] }}</td>
-                <td>{{ ViewData.OldAlert['vendorInformation'].provider }}</td>
-                <td>{% if ViewData.OldAlert['assignedTo'] %} {{ ViewData.OldAlert['assignedTo'] }} {% else %} {% endif %}</td>
-                <td>{{ ViewData.OldAlert['comments'] }}</td>
-            </tr>
-        </table>
+        <div class="table-responsive rounded">
+            <table class="table table-striped table-responsive rounded">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Severity</th>
+                        <th>Status</th>
+                        <th>Feedback</th>
+                        <th>Provider</th>
+                        <th>AssignedTo</th>
+                        <th>Comments</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <a href="/DisplayAlert/{{ ViewData.OldAlert.id }}" target="_blank\">
+                                <div style="height:100%;width:100%">
+                                    {{ ViewData.OldAlert.title }}
+                                </div>
+                            </a>
+                        </td>
+                        <td>{{ ViewData.OldAlert['category'] }}</td>
+                        <td>{% if ViewData.OldAlert['severity'] %} {{ ViewData.OldAlert['severity'] }} {% else %} {% endif %}</td>
+                        <td>{{ ViewData.OldAlert['status'] }}</td>
+                        <td>{{ ViewData.OldAlert['feedback'] }}</td>
+                        <td>{{ ViewData.OldAlert['vendorInformation'].provider }}</td>
+                        <td>{% if ViewData.OldAlert['assignedTo'] %} {{ ViewData.OldAlert['assignedTo'] }} {% else %} {% endif %}</td>
+                        <td>{{ ViewData.OldAlert['comments'] }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
         <br />
         <b>Updated Alert Details:</b>
-        <table>
-            <tr>
-                <th><b>Title</b></th>
-                <th><b>Category</b></th>
-                <th><b>Severity</b></th>
-                <th><b>Status</b></th>
-                <th><b>Feedback</b></th>
-                <th><b>Provider</b></th>
-                <th><b>AssignedTo</b></th>
-                <th><b>Comments</b></th>
-            </tr>
-            <tr>
-                <td>
-                    <a href="/DisplayAlert/{{ ViewData.UpdateAlertResults.id }}" target="_blank\">
-                        <div style="height:100%;width:100%">
-                            {{ ViewData.UpdateAlertResults.title }}
-                        </div>
-                    </a>
-                </td>
-                <td>{{ ViewData.UpdateAlertResults.category }}</td>
-                <td>{% if ViewData.UpdateAlertResults.severity %} {{ ViewData.UpdateAlertResults.severity }} {% endif %}</td>
-                <td>{{ ViewData.UpdateAlertResults.status }}</td>
-                <td>{{ ViewData.UpdateAlertResults.feedback }}</td>
-                <td>{{ ViewData.UpdateAlertResults.vendorInformation.provider }}</td>
-                <td>{% if ViewData.UpdateAlertResults.assignedTo %} {{ ViewData.UpdateAlertResults.assignedTo }} {% endif %}</td>
-                <td>{{ ViewData.UpdateAlertResults.comments }}</td>
-            </tr>
-        </table>
+        <div class="table-responsive rounded">
+            <table class="table table-striped">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Severity</th>
+                        <th>Status</th>
+                        <th>Feedback</th>
+                        <th>Provider</th>
+                        <th>AssignedTo</th>
+                        <th>Comments</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <a href="/DisplayAlert/{{ ViewData.UpdateAlertResults.id }}" target="_blank\">
+                                <div style="height:100%;width:100%">
+                                    {{ ViewData.UpdateAlertResults.title }}
+                                </div>
+                            </a>
+                        </td>
+                        <td>{{ ViewData.UpdateAlertResults.category }}</td>
+                        <td>{% if ViewData.UpdateAlertResults.severity %} {{ ViewData.UpdateAlertResults.severity }} {% endif %}</td>
+                        <td>{{ ViewData.UpdateAlertResults.status }}</td>
+                        <td>{{ ViewData.UpdateAlertResults.feedback }}</td>
+                        <td>{{ ViewData.UpdateAlertResults.vendorInformation.provider }}</td>
+                        <td>{% if ViewData.UpdateAlertResults.assignedTo %} {{ ViewData.UpdateAlertResults.assignedTo }} {% endif %}</td>
+                        <td>{{ ViewData.UpdateAlertResults.comments }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
         {% else %}
         {{ ViewData.UpdateAlertError }}
         {% endif %}
@@ -328,6 +347,10 @@
 
 <hr>
 {% include "Webhook.html" %}
+
+
+{% include "_ActionsPartial.html" %}
+
 
 {% endblock %}
 

@@ -1,0 +1,134 @@
+<!--  Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license.
+        See LICENSE in the source repository root for complete license information. -->
+
+{% if 'scopes' in session and "SecurityActions.ReadWrite.All" in session.scopes %}
+<hr>
+
+<form action="{{ url_for('actions') }}" method="POST">
+    <h3>Actions</h3>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <h4>Remediation action</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="SelectAction">Action</label>
+                    <select id="SelectAction" name="SelectAction" class="form-control" value="{{ session.get('alertData').Action }}" required>
+                        <option class="text-muted" value="" selected="selected">Select Action</option>
+                        <option value="Allow">Allow</option>
+                        <option value="Block">Block</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="propertyName">Property Name</label>
+                    <input type="text" id="propertyName" name="propertyName" class="form-control"
+                        value="{{ session.get('alertData').PropertyName }}" placeholder="Enter property name" />
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="propertyValue">Property Value</label>
+                    <input type="text" id="propertyValue" name="propertyValue" class="form-control"
+                        value="{{ session.get('alertData').PropertyValue }}" placeholder="Enter property value" />
+                </div>
+            </div>
+            <br>
+        </div>
+        <br>
+        <div class="row">
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="SelectProvider">Provider</label>
+                    <br>
+                    <select id="SelectProvider" name="Provider" class="form-control" runat="server"
+                        value="{{ session.get('alertData').Provider }}"
+                        selected="{{ session.get('alertData').Provider }}" required>
+                        <option class="text-muted" value="" selected="selected">Select a Provider</option>
+                        {% if session.get('providers') %}
+                        {% for provider in session.get('providers') %}
+                        <option value="{{ provider }}">{{ provider }}</option>
+                        {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="reason">Reason</label>
+                    <textarea id="reason" name="reason" class="form-control"
+                        value="{{ session.get('alertData').Reason }}" placeholder="Enter reason" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="invokeAction">&nbsp;</label>
+                    <button class="btn btn-primary form-control" id="invokeAction" ng-model="GetAlertsClicked">
+                        <b class="text-center">Invoke action</b>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+<div class="row">
+    <div class="col-md-6">
+        <h4>List actions</h4>
+    </div>
+    <div class="col-md-2">
+        <a href="/Actions" class="btn btn-primary btn-responsive form-control">
+            <b class="text-center">List actions</b>
+        </a>
+    </div>
+</div>
+
+{% if 'action_created' in ViewData%}
+<br>
+
+<div class="card" ng-show="GetAlertsClicked">
+    <div class="card-header">Action details</div>
+    <div class="card-body">
+        {% if 'UpdateQueryDetails' in ViewData %}
+        {{ ViewData.UpdateQueryDetails }}
+        <br />
+        {% endif %}
+        {% if 'UpdateQueryBody' in ViewData %}
+        {{ ViewData.UpdateQueryBody }}
+        <br />
+        <br />
+        {% endif %}
+        {% if ViewData.action_created|length > 0 %}
+        <b>Action Details:</b>
+        {% for sub in ViewData.action_created %}
+        <div class="table-responsive rounded">
+            <table class="table table-striped">
+                <thead class="thead-dark">
+                    <tr>
+                        <th><b>Property</b></th>
+                        <th><b>Details</b></th>
+                    </tr>
+                </thead>
+                {% for prop in sub %}
+                {% if prop != "clientState" %}
+                <tr>
+                    <td>{{ prop }}</td>
+                    <td>{{ sub[prop] }}</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </table>
+        </div>
+        <br>
+        {% endfor %}
+        {% else %}
+        <p><b>No actions found</b></p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% endif %}

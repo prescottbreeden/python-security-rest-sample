@@ -39,26 +39,20 @@ Follow these steps to install the samples:
 
 ## Configuration
 
-To configure the samples, you'll need to register a new application in the Microsoft [Application Registration Portal](https://apps.dev.microsoft.com/).
+To configure the samples, you'll need to register a new application in the Microsoft [Application Registration Portal](https://ms.portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/RegisteredAppsPreview).
 
 Follow these steps to register a new application:
 
-1. Sign in to the [Application Registration Portal](https://apps.dev.microsoft.com/) using either your personal or work or school account.
-
-2. Under **My applications**, choose **Add an app**. If you're using an Office 365 account and see two categories listed (Converged or Azure AD only), choose **Add an app** for the Converged applications section.
-
-3. Enter an application name, and choose **Create**. (Do *not* choose **Guided Setup**.)
-
-4. Next you'll see the registration page for your app. Copy and save the **Application Id** field.You will need it later to complete the configuration process.
-
-5. Under **Application Secrets**, choose **Generate New Password**. A new password will be displayed in the **New password generated** dialog. Copy this password. You will need it later to complete the configuration process.
-
-6. Under **Platforms**, choose **Add platform** > **Web**.
-
-7. Under **Delegated Permissions**, add the permissions/scopes required for the sample. This sample requires **User.Read**, **SecurityEvents.Read.All**, and **SecurityEvents.ReadWrite.All** permissions.
+1. Sign in to the [Application Registration Portal](https://ms.portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/RegisteredAppsPreview) using either your personal or work or school account.
+2. Choose **New registration**.
+3. Enter an application name, enter `http://localhost:5000/login/authorized` as the Redirect URL.
+    > **Note:** If you would like your application to be multi-tenanted, select `Accounts in any organizational directory` in the **Supported account types** section.
+4. Select **Register**.
+5. Next you'll see the overview page for your app. Copy and save the **Application Id** field. You will need it later to complete the configuration process.
+6. Under **Certificates & secrets**, choose **New client secret** and add a quick description. A new secret will be displayed in the **Value** column. Copy this password. You will need it later to complete the configuration process.
+7. Under **API permissions**, choose **Add a permission** > **Microsoft Graph**.
+8. Under **Delegated Permissions**, add the permissions/scopes required for the sample. This sample requires **User.Read**,  **SecurityEvents.ReadWrite.All**, and **SecurityActions.ReadWrite.All** permissions.
     >**Note**: See the [Microsoft Graph permissions reference](https://developer.microsoft.com/en-us/graph/docs/concepts/permissions_reference) for more information about Graph's permission model.
-
-8. Enter `http://localhost:5000/login/authorized` as the Redirect URL, and then choose **Save**.
 
 Follow these steps to allow [webhooks](https://developer.microsoft.com/en-us/graph/docs/concepts/webhooks) to access the sample via a NGROK tunnel:
 

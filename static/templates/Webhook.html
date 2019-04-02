@@ -117,9 +117,9 @@
 {% if 'webhook_sub' in ViewData%}
 <br>
 
-<div class="panel panel-default" ng-show="GetAlertsClicked">
-    <div class="panel-heading">Subscription details</div>
-    <div class="panel-body">
+<div class="card" ng-show="GetAlertsClicked">
+    <div class="card-header">Subscription details</div>
+    <div class="card-body">
         {% if 'UpdateQueryDetails' in ViewData %}
             {{ ViewData.UpdateQueryDetails }}
             <br />
@@ -132,11 +132,14 @@
         {% if ViewData.webhook_sub|length > 0 %}
             <b>Subscription Details:</b>
             {% for sub in ViewData.webhook_sub %}
+            <div class="table-responsive rounded">
                 <table class="table table-striped">
-                    <tr>
-                        <th><b>Property</b></th>
-                        <th><b>Details</b></th>
-                    </tr>
+                    <thead class="thead-dark">
+                        <tr>
+                            <th><b>Property</b></th>
+                            <th><b>Details</b></th>
+                        </tr>
+                    </thead>
                         {% for prop in sub %}
                             {% if prop != "clientState" %}
                                 <tr>
@@ -146,7 +149,8 @@
                             {% endif %}
                         {% endfor %}
                 </table>
-                <br>
+            </div>
+            <br>
             {% endfor %}
         {% else %}
             <p><b>No subscriptions found</b></p>
