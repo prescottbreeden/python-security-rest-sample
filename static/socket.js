@@ -7,15 +7,18 @@ const socket = io.connect(location.href);
 socket.on('notification_received', webhookData => {
     console.log("webhookData : ", webhookData);
     webhookData.value.forEach(message => {
-        let panel = document.createElement("div");
-        panel.className = "panel panel-primary";
-        let panelBody = document.createElement("div");
-        panelBody.className = "panel-body";
+        let card = document.createElement("div");
+        card.className = "card";
+        let cardBody = document.createElement("div");
+        cardBody.className = "card-body";
        
 
+        let roundedDiv = document.createElement("div")
+        roundedDiv.className = "table-responsive rounded"
         let table = document.createElement("table");
         table.className = 'table table-hover';
         let thead = document.createElement("thead");
+        thead.className = "thead-dark"
         let tr = document.createElement("tr");
         let property = document.createElement("th");
         property.innerText = "Property"
@@ -46,10 +49,11 @@ socket.on('notification_received', webhookData => {
         thead.appendChild(tr);
         table.appendChild(thead);
         table.appendChild(tbody);
-        panelBody.appendChild(table);
-        panel.appendChild(panelBody);
+        roundedDiv.appendChild(table)
+        cardBody.appendChild(roundedDiv);
+        card.appendChild(cardBody);
 
-        document.getElementById('notifications').appendChild(panel);
+        document.getElementById('notifications').appendChild(card);
     });
 });    
 

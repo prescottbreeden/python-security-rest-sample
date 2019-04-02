@@ -3,44 +3,17 @@
 
 
 {% if 'access_token' in session %}
-<text>
-    <ul class="nav navbar-nav navbar-right">
-        <li class="navbar-text">
-            <!-- Displays the username or email stored in the flask session -->
-            Hello, {{ session['username'] or session['email'] }}
-        </li>
-        <li>
-            <a href="{{ url_for('logout')}}" title="Sign out" class="links">
-                Sign Out
-            </a>
-        </li>
-    </ul>
-</text>
+
+<span class="navbar-text" style="margin-right: 10px">
+    <!-- Displays the username or email stored in the flask session -->
+    Hello, {{ session['username'] or session['email'] }}
+</span>
+<a href="{{ url_for('logout')}}" role="button" title="Sign out" class="btn btn-outline-secondary">
+    Sign Out
+</a> 
 {% else %}
-<style type="text/css">
-    ul.links {
-        list-style-type: none;
-    }
 
-        ul.links li {
-            display: inline-block;
-            border-left: 1px solid black;
-            padding-left: 10px;
-            margin-left: 10px;
-        }
-
-            ul.links li:first-child {
-                border-left: 0;
-                padding-left: 0;
-                margin-left: 0;
-            }
-</style>
-
-<ul class="nav navbar-nav navbar-right">
-    <li>
-        <a href="{{ url_for('login')}}" title="Sign in" class="links">
-            Sign in with Microsoft
-        </a>
-    </li>
-</ul>
+<a href="{{ url_for('login')}}" role="button" title="Sign in" class="btn btn-outline-secondary">
+    Sign in with Microsoft
+</a>
 {% endif %}

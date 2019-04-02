@@ -1,0 +1,38 @@
+<!--  Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license.
+        See LICENSE in the source repository root for complete license information. -->
+
+{% if 'secure_scores' in session and session.secure_scores != None %}
+<h3>Secure score overview</h3>
+
+<div class="container">
+        <div class="row">
+                <div class="col-sm">
+                        <h5 class="text-center">Secure Score</h5>
+                        <h5 class="text-center">
+                                <Span>
+                                        {{ session.secure_scores.currentScore|int }}/{{ session.secure_scores.maxScore|int }}
+                                </Span>
+                        </h5>  
+                </div>
+        </div>
+        <div class="row">
+                <div class="col-sm">
+                        <div class="progress">
+                                <div class="progress-bar" role="progressbar" style="width: {{ (session.secure_scores.currentScore/session.secure_scores.maxScore *100) }}%" aria-valuenow='{{ (session.secure_scores.currentScore/session.secure_scores.maxScore *100) }}' aria-valuemin="0" aria-valuemax="{{ session.secure_scores.maxScore|int }}"></div>
+                        </div>
+                </div>
+        </div>
+        <div class="row justify-content-center">
+                <div class="col-md-auto">
+                        <br>
+                        <a href="{{ url_for('secure_score') }}" class="btn btn-primary">
+                                <B>Score Details</B>
+                        </a>
+                </div>
+        </div>
+
+</div>
+
+<hr>
+{% endif %}
+
