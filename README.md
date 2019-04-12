@@ -43,7 +43,7 @@ To configure the samples, you'll need to register a new application in the Micro
 
 Follow these steps to register a new application:
 
-1. Sign in to the [Application Registration Portal](https://ms.portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/RegisteredAppsPreview) using either your personal or work or school account.
+1. Sign in to the [Application Registration Portal](https://go.microsoft.com/fwlink/?linkid=2083908) using either your personal or work or school account.
 2. Choose **New registration**.
 3. Enter an application name, enter `http://localhost:5000/login/authorized` as the Redirect URL.
     > **Note:** If you would like your application to be multi-tenanted, select `Accounts in any organizational directory` in the **Supported account types** section.
