@@ -39,7 +39,7 @@ Follow these steps to install the samples:
 
 ## Configuration
 
-To configure the samples, you'll need to register a new application in the Microsoft [Application Registration Portal](https://ms.portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/RegisteredAppsPreview).
+To configure the samples, you'll need to register a new application in the Microsoft [Application Registration Portal](https://go.microsoft.com/fwlink/?linkid=2083908).
 
 Follow these steps to register a new application:
 
