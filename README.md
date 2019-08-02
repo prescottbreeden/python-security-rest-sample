@@ -1,3 +1,18 @@
+---
+page_type: sample
+products:
+- ms-graph
+languages:
+- python
+- html
+extensions:
+  contentType: samples
+  technologies:
+  - Microsoft Graph
+  services:
+  - Security
+  createdDate: 4/5/2018 3:22:33 PM
+---
 # Python Web App demo using Microsoft Intelligent Security Graph
 
 ![language:Python](https://img.shields.io/badge/Language-Python-blue.svg?style=flat-square) ![license:MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)
