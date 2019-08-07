@@ -1,20 +1,20 @@
-############### notificationURL?
 """Configuration settings for running the Python auth samples locally.
 
 In a production deployment, this information should be saved in a database or
 other secure storage mechanism.
 """
 
-# Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT license.
 # See LICENSE in the project root for license information.
 
 # Application Id?
-CLIENT_ID = 'bc3fb16e-01eb-46b0-a26b-f0f80daa245b'
-CLIENT_SECRET = 'M3]JUf@19JA=DUzsTaO*dd0e-f]vIdEf'
+CLIENT_ID = 'abca2d54-2fe9-430a-a2fb-485faf29b335'
+CLIENT_SECRET = '26MwQ+M6J/A-tx1B/C=VnGP2]@qa2isM'
 REDIRECT_URI = 'http://localhost:5000/login/authorized'
 
 WEBHOOK_DATA = {'changeType': 'updated',
-                'notificationUrl': 'https://http://62673013.ngrok.io/listen',
+                'notificationUrl': 'http://dcc29574.ngrok.io',
                 'resource': 'security/alerts',
                 'clientState': 'cLIENTsTATEfORvALIDATION'}
 

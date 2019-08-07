@@ -3,6 +3,7 @@
 # Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license.
 # See LICENSE in the project root for license information.
 
+
 import gevent.monkey
 gevent.monkey.patch_all()
 import config
@@ -33,6 +34,7 @@ socketio = SocketIO(app, manage_session=False, async_mode="gevent")
 MSGRAPH = OAuth2Session(config.CLIENT_ID,
                         redirect_uri=config.REDIRECT_URI,
                         scope=config.SCOPES)
+
 
 #########################################################################
 # -------------------------------- #
@@ -258,8 +260,14 @@ def get_secure_score():
 
     """Helper function to create a GET request for all $Top=1 secure scores."""
 
-    base_url = config.RESOURCE + config.SECURESCORE_VERSION + '/security/'
-    secure_scores = MSGRAPH.get(base_url + 'secureScores?$top=1').json()
+    # base_url = config.RESOURCE + config.SECURESCORE_VERSION + '/security/'
+    # secure_scores = MSGRAPH.get(base_url + 'secureScores?$top=1').json()
+    # secure_scores = MSGRAPH.get('%s%s/security/secureScores?$top=1' %
+    #                             (base_url, config.SECURESCORE_VERSION)).json()
+
+    base_url = config.RESOURCE
+    version = config.SECURESCORE_VERSION
+    secure_scores = MSGRAPH.get(f'{base_url}{version}/security/secureScores?$top=1').json()
 
     # error handling
     if b'' in secure_scores:
