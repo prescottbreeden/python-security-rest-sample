@@ -4,8 +4,8 @@
 # See LICENSE in the project root for license information.
 
 
-import gevent.monkey
-gevent.monkey.patch_all()
+# import gevent.monkey
+# gevent.monkey.patch_all()
 import config
 import uuid
 import datetime
@@ -30,7 +30,7 @@ if app.secret_key == 'development':
 
 
 # session(app) <~~ pretty sure not needed, please test me
-socketio = SocketIO(app, manage_session=False, async_mode="gevent")
+# socketio = SocketIO(app, manage_session=False, async_mode="gevent")
 MSGRAPH = OAuth2Session(config.CLIENT_ID,
                         redirect_uri=config.REDIRECT_URI,
                         scope=config.SCOPES)
@@ -742,9 +742,9 @@ def listen():
                                      Year=datetime.date.today().strftime("%Y"))
 
 
-@socketio.on('connect', namespace='/listen')
-def test_connect():
-    print("connected")
+# @socketio.on('connect', namespace='/listen')
+# def test_connect():
+#     print("connected")
 
 
 def request_headers(headers=None):
@@ -761,4 +761,5 @@ def request_headers(headers=None):
 
 
 if __name__ == '__main__':
-    socketio.run(app)
+    app.run()
+    # socketio.run(app)
