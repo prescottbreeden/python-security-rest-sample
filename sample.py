@@ -8,7 +8,7 @@
 # gevent.monkey.patch_all()
 import config
 import uuid
-import datetime
+from datetime import datetime, timedelta, date
 import urllib
 import json
 from flask import Flask, request, render_template, redirect, session, url_for, flash
@@ -20,7 +20,9 @@ from flask_socketio import SocketIO
 app = Flask(__name__, template_folder='static/templates')
 app.debug = True
 app.secret_key = 'development'
-app.config['SESSION_TYPE'] = 'filesystem'
+# app.config['SESSION_TYPE'] = 'filesystem' <-- shouldn't be necessary
+# consider creating a true config file for flask
+app.session_type = 'filesystem'
 
 # ONLY TO BE USED IN DEVELOPMENT
 if app.secret_key == 'development':
@@ -41,10 +43,12 @@ MSGRAPH = OAuth2Session(config.CLIENT_ID,
 #         Helper Functions         #
 # -------------------------------- #
 #########################################################################
+def check_token_expiration():
+    return datetime.now() > session['token_expires_in']
+
+
 def get_providers():
-
     """Heper function that returns a list of providers """
-
     top_alerts = get_top_security_alert()
     providers = []
     provider_map = {}
@@ -60,26 +64,24 @@ def get_providers():
 
 
 def requires_auth(f):
-
     """Decorator to prompt a user to authenticate in the event an action \
         requires authentication."""
-
     @wraps(f)
     def decorated(*args, **kwargs):
         if 'access_token' not in session:
             return redirect('/login')
         if not MSGRAPH.authorized:
             return redirect('/login')
-        if session["token_expires_in"] < datetime.datetime.now():
+        if check_token_expiration():
             return redirect('/login')
         return f(*args, **kwargs)
     return decorated
 
 
-def get_alerts_from_graph():
+def get_alerts_from_graph(alert_data):
     """Helper to Make Rest API call to graph by building the query"""
     base_url = config.SECURITYAPI_URL
-    alert_data = session['alertData']
+    # alert_data = session['alertData']
     filtered_query = ""
     if 'AssignedToMe' in alert_data:
         filtered_query += "assignedTo eq '" + session['email'] + "'"
@@ -98,7 +100,7 @@ def get_alerts_from_graph():
         add_filter = '$filter='
 
     query = "alerts?" + add_filter + filtered_query
-    session['VIEW_DATA']['QueryDetails'] = query
+    # session['VIEW_DATA']['QueryDetails'] = query
     query = urllib.parse.quote(query, safe="/?$='&")  # cleans up the url
     return MSGRAPH.get(base_url + query, headers=request_headers()).json()
 
@@ -149,7 +151,7 @@ def get_alert_by_id(alert_id):
     return alert
 
 
-################################# return statement?
+################################# return ?
 def update_security_alert(alert_id, new_data):
     """Helper to Update a security graph alert.
 
@@ -235,11 +237,8 @@ def update_webhook_subscription(subscription_id, webhook_body):
 
 
 def get_webhook_subscriptions():
-
     """Helper function to create a GET request for all current webhook \
         subscriptions for the application."""
-
-    ####################### inconsistent use of base_url
     base_url = config.RESOURCE
     subscriptions = MSGRAPH.get('%s%s/subscriptions' %
                                 (base_url, config.SECURITYAPI_VERSION)).json()
@@ -306,9 +305,7 @@ def get_secure_score_control_profiles():
 
 
 def create_action(action_body):
-
     """Helper function to create a POST request for a new security action."""
-
     base_url = config.RESOURCE
     action = MSGRAPH.post('%s%s/security/securityActions' %
                           (base_url, config.SECURITYACTION_VERSION),
@@ -355,40 +352,36 @@ def get_actions():
 #           Flask Routes           #
 # -------------------------------- #
 ###################################################################
-@app.route('/')
-def homepage():
-
-    """Flask Route to render the home page view."""
-
+def render_homepage(data={}):
     title = "Microsoft Graph Security API demo web application"
-
-    ############### does view data need to go in session?
-
-    # error handing
-    if 'VIEW_DATA' not in session:
-        session['VIEW_DATA'] = {}  # used to store items that should be rendered in the HTML
     if 'access_token' in session:
         if 'email' not in session or 'username' not in session:
             return redirect(url_for('get_my_email_address'))
         if 'SecurityEvents.ReadWrite.All' not in session['scopes']:
             return render_template('Admin_consent.html',
                                    Title=title,
-                                   Year=datetime.date.today().strftime("%Y"),
-                                   ViewData=session['VIEW_DATA'],
+                                   Year=date.today().strftime("%Y"),
+                                   ViewData=data,
                                    Config=config)
 
     return render_template('Graph.html',
                            Title=title,
-                           Year=datetime.date.today().strftime("%Y"),
-                           ViewData=session['VIEW_DATA'],
+                           Year=date.today().strftime("%Y"),
+                           ViewData=data,
                            Config=config)
+
+@app.route('/')
+def homepage():
+    """Flask Route to render the home page view."""
+    return render_homepage()
+
+    ############### does view data need to go in session?
+
 
 
 @app.route('/login')
 def login():
-
     """Flask Route to prompt a user to login and authenticate."""
-
     session.clear()
     authorization_url, state = \
         MSGRAPH.authorization_url(config.AUTHORITY_URL + config.AUTH_ENDPOINT)
@@ -398,9 +391,7 @@ def login():
 
 @app.route('/login/authorized')
 def authorized():
-
     """Flask Route to hand the application's Redirect Uri."""
-
     # error handling
     if (session.get('state') and
             str(session['state']) != str(request.args.get('state'))):
@@ -429,24 +420,28 @@ def authorized():
                                 client_secret=config.CLIENT_SECRET,
                                 authorization_response=request.url)
 
-    expires_in = (datetime.datetime.now() +
-                  datetime.timedelta(seconds=token.get('expires_in', 3599)))
+    expires_in = (datetime.now() +
+                  timedelta(seconds=token.get('expires_in', 3599)))
+
+
+
+    #####################################################
+    #       SESSION SHIZZ
+    #####################################################
 
     # generate session variables
     session["token_expires_in"] = expires_in
     session['access_token'] = token
     session['scopes'] = token['scope']
     session['providers'] = get_providers()
-    session['secure_scores'] = get_secure_score()
-    session['secure_score_profiles'] = get_secure_score_control_profiles()
+    # session['secure_scores'] = get_secure_score()
+    # session['secure_score_profiles'] = get_secure_score_control_profiles()
     return redirect('/')
 
 
 @app.route('/logout')
 def logout():
-
     """Heper function to sign out the current user from the session."""
-
     session.clear()
     return redirect(url_for('homepage'))
 
@@ -455,12 +450,11 @@ def logout():
 @requires_auth
 def get_my_email_address():
     """Make Rest API call to graph for current users email"""
-    session['VIEW_DATA'].clear()  # reset data passed to the Graph.html
+    # session['VIEW_DATA'].clear()  # reset data passed to the Graph.html
     base_url = config.RESOURCE + config.API_VERSION + '/'
     user_profile = MSGRAPH.get(base_url + 'me',
                                headers=request_headers()).json()
     if 'error' in user_profile:  # Access token has expired!
-        # print(user_profile)
         if user_profile['error']['code'] == 'InvalidAuthenticationToken':
             return redirect(url_for('login'))
 
@@ -475,13 +469,19 @@ def get_alerts():
     """Make Rest API call to security graph for alerts"""
     if request.method == 'POST':
         result = request.form
-        alert_data = {}
-        session['VIEW_DATA'].clear()
-        for key in result:
-            alert_data[key] = result[key]
-        session['alertData'] = alert_data
+        data = {
+            'alertData': None
+        }
 
-        filtered_alerts = get_alerts_from_graph()
+        # session['VIEW_DATA'].clear()
+        ################### copying dictionary?
+        # for key in result:
+        #     alert_data[key] = result[key]
+        # session['alertData'] = alert_data
+
+        data['alertData'] = result
+
+        filtered_alerts = get_alerts_from_graph(result)
         if b'' in filtered_alerts:
             print("Sign-in with an on.microsoft.com account for demo data.")
             filtered_alerts = "Incorrect Tenant Account"
@@ -489,12 +489,9 @@ def get_alerts():
             if filtered_alerts['error']['code'] == 'InvalidAuthenticationToken':
                 return redirect(url_for('login'))
 
-        session['VIEW_DATA']['GetAlertResults'] = filtered_alerts
-    return redirect(url_for('homepage'))
-
-
-
-
+        data['GetAlertResults'] = filtered_alerts
+    return render_homepage(data)
+    # return redirect(url_for('homepage'))
 
 
 @app.route('/DisplayAlert/<alert_id>')
@@ -518,9 +515,7 @@ def display_alert(alert_id):
 @app.route('/SecureScore', methods=['GET'])
 @requires_auth
 def secure_score():
-
     """ Flask Route to show the secure score page. """
-
     title = "Microsoft Graph Security API demo web application"
     return render_template('SecureScore.html',
                            Title=title,
@@ -548,7 +543,7 @@ def update_alert():
         alert_id = alert_data['AlertId']
         old_alert = get_alert_by_id(alert_id)  # store old alert before updating it
         if not old_alert:  # alert not found
-            session['VIEW_DATA']['UpdateAlertError'] = "No alert matching this ID " + alert_id + " was found"
+            session['VIEW_DATA']['UpdateAlertError'] = f"No alert matching this ID {alert_id} was found"
             return redirect(url_for('homepage'))
         else:
             session['VIEW_DATA']['OldAlert'] = old_alert
@@ -576,9 +571,8 @@ def update_alert():
 
             # store the alert to be rendered in the table in Graph.html
             session['VIEW_DATA']['UpdateAlertResults'] = updated_alert
-            session['VIEW_DATA']['UpdateQueryDetails'] = \
-                "REST query PATCH: '%salerts/%s'" % (config.SECURITYAPI_URL,
-                                                     alert_id)
+            session['VIEW_DATA']['UpdateQueryDetails'] = "REST query PATCH: \
+                f'{config.SECURITYAPI_VERSION}alerts/{alert_id}'"
             session['VIEW_DATA']['UpdateQueryBody'] = \
                 "Request Body: " + json.dumps(properties_to_update,
                                               sort_keys=True,
@@ -598,7 +592,7 @@ def subscribe():
         session['VIEW_DATA'].clear()
         webhook_form = {key: value for (key, value) in request.form}
 
-        # This block only making a copy of the form?
+        ################################3 This block only making a copy of the form?
         # webhook_form = {}
         # for key in request.form:
         #     webhook_form[key] = request.form[key]
@@ -679,11 +673,13 @@ def subscribe():
 def actions():
     if request.method == 'POST':
         session['VIEW_DATA'].clear()
+
+        ############################## copying dictionary?
         action_form = {}
         for key in request.form:
             action_form[key] = request.form[key]
+
         session['VIEW_DATA']['ActionForm'] = action_form
-        # print("action_form : ", action_form)
         action_body = {}
         action_body['name'] = action_form.get("SelectAction")
         action_body['actionReason'] = action_form.get("reason")
@@ -700,23 +696,25 @@ def actions():
             print("POST response: ", response)
             session['VIEW_DATA']["action_created"] = [response]
             session['VIEW_DATA']['UpdateQueryDetails'] = "REST query POST: '" \
-                                                               + config.RESOURCE \
-                                                               + config.SECURITYACTION_VERSION \
-                                                               + "/security/securityActions'"
-            session['VIEW_DATA']['UpdateQueryBody'] = "Request Body: " + json.dumps(action_body,
-                                                                                          sort_keys=True,
-                                                                                          indent=4,
-                                                                                          separators=(',', ': '))
+                + config.RESOURCE \
+                + config.SECURITYACTION_VERSION \
+                + "/security/securityActions'"
+            session['VIEW_DATA']['UpdateQueryBody'] = \
+                "Request Body: " + json.dumps(action_body,
+                                              sort_keys=True,
+                                              indent=4,
+                                              separators=(',', ': '))
 
     if request.method == 'GET':
         session['VIEW_DATA'].clear()
         _actions = get_actions()
+
         if _actions:
                 session['VIEW_DATA']["action_created"] = _actions.get('value')
                 session['VIEW_DATA']['UpdateQueryDetails'] = "REST query GET: '" \
-                                                                   + config.RESOURCE \
-                                                                   + config.SECURITYACTION_VERSION \
-                                                                   + "/securityActions'"
+                    + config.RESOURCE \
+                    + config.SECURITYACTION_VERSION \
+                    + "/securityActions'"
 
     return redirect(url_for('homepage'))
 
